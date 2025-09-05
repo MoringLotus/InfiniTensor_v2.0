@@ -1,0 +1,2 @@
+export INFINI_ROOT=~/.infini
+export LD_LIBRARY_PATH=$INFINI_ROOT/lib:$LD_LIBRARY_PATH

@@ -1,0 +1,46 @@
+name: Build and test cpu
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  pull_request:
+    paths:
+      - '**.md'
+      - 'LICENSE'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Clone InfiniCore
+      run: |
+        if [ ! -d InfiniCore ]; then
+          git clone git@github.com:InfiniTensor/InfiniCore.git
+        else
+          echo "InfiniCore already exists"
+        fi
+
+    - name: Install Xmake
+      run: |
+        curl -fsSL https://xmake.io/shget.text | bash
+        echo "$HOME/.xmake" >> $GITHUB_PATH
+
+    - name: build InfiniCore
+      run: cd InfiniCore && python scripts/install.py
+
+    - name: set INFINI_ROOT environment
+      run: echo "INFINI_ROOT=~/.infini" >> $GITHUB_ENV && echo "LD_LIBRARY_PATH=$INFINI_ROOT/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+    - name: Build InfiniTensor
+      run: make build
