@@ -102,6 +102,11 @@ public:
         }
     }
 
+    bool operator==(const DataType &other) const
+    {
+        return getType() == other.getType();
+    }
+
 private:
     infiniDtype_t dtype_;
 };

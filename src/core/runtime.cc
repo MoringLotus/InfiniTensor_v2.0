@@ -2,39 +2,42 @@
 
 namespace infini
 {
+    thread_local Context g_currentCtx = nullptr;
+
     Runtime &RuntimeObj::getInstance()
     {
-        static Runtime instance;
+        static Runtime instance = make_ref<RuntimeObj>();
+        ;
         return instance;
     }
 
     void RuntimeObj::initThreadContext(infiniDevice_t device, int deviceId)
     {
-        thread_local Context currentCtx;
+        // thread_local Context currentCtx;
 
-        if (!currentCtx)
+        if (!g_currentCtx)
         {
             infinirtStream_t stream = nullptr;
             CHECK_INFINI_ERROR(infinirtSetDevice(device, deviceId));
             CHECK_INFINI_ERROR(infinirtStreamCreate(&stream)); // 创建线程专属 stream
-            currentCtx = std::make_shared<ContextObj>();
-            currentCtx->device = device;
-            currentCtx->deviceId = deviceId;
-            currentCtx->stream = stream;
+            g_currentCtx = std::make_shared<ContextObj>();
+            g_currentCtx->device = device;
+            g_currentCtx->deviceId = deviceId;
+            g_currentCtx->stream = stream;
 
             std::lock_guard<std::mutex> lock(mtx);
-            threadContexts[std::this_thread::get_id()] = currentCtx;
+            threadContexts[std::this_thread::get_id()] = g_currentCtx;
         }
     }
 
     Context RuntimeObj::getCurrentThreadContext() const
     {
-        thread_local Context currentCtx;
-        if (!currentCtx)
+        // thread_local Context currentCtx;
+        if (!g_currentCtx)
         {
             throw std::runtime_error("Thread context not initialized!");
         }
-        return currentCtx;
+        return g_currentCtx;
     }
 
     void RuntimeObj::setCurrentDevice(infiniDevice_t device, int deviceId)
@@ -61,10 +64,9 @@ namespace infini
         {
             auto context = getCurrentThreadContext();
             auto device = context->device;
-            auto stream = context->stream;
             auto kernelAttrs = KernelAttrs{device, op->getOpType().underlying()};
             Kernel *kernel = kernelRegistry.getKernel(kernelAttrs);
-            kernel->compute(op, stream);
+            kernel->compute(op, this);
         }
     }
 
@@ -119,4 +121,20 @@ namespace infini
         CHECK_INFINI_ERROR(infinirtDeviceSynchronize());
     }
 
+    void *RuntimeObj::getWorkspace(size_t size) const
+    {
+        IT_ASSERT(size < getWorkspaceSize(), "Workspace size is too small");
+        return workspace;
+    }
+
+    size_t RuntimeObj::getWorkspaceSize() const
+    {
+        return workspaceSize;
+    }
+
+    void RuntimeObj::allocworkspace()
+    {
+        workspaceSize = 7ll << 30;
+        workspace = allocDevice(workspaceSize);
+    }
 } // namespace infini

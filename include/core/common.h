@@ -38,8 +38,14 @@ namespace infini
     using std::unordered_map;
     using std::vector;
     using ElementType = size_t;
+    using ShapeElem = size_t;
+    using Shape = vector<ShapeElem>;
+    using StrideElem = ptrdiff_t;
+    using Stride = vector<StrideElem>;
 
 // Metaprogramming utilities
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 #define _CAT(A, B) A##B
 #define _SELECT(NAME, NUM) _CAT(NAME##_, NUM)
 #define _GET_COUNT(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, COUNT, ...) COUNT

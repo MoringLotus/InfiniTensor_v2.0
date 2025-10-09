@@ -1,14 +1,8 @@
-
+option(BUILD_TEST "Build tests" OFF)
 cmake_minimum_required(VERSION 3.17)
 
 include(CMakeDependentOption)
 project(InfiniTensor C CXX)
-
-# if(DEFINED ENV{INFINI_ROOT})
-#   include_directories($ENV{INFINI_ROOT}/include)
-# else()
-#   include_directories(~/.infini/include)
-# endif()
 
 set(DEFAULT_BUILD_TYPE "RelWithDebInfo")
 # Build Type
@@ -59,4 +53,31 @@ if(DEFINED ENV{INFINI_ROOT})
   target_link_libraries(InfiniTensor ${INFINOP_LIBRARY} ${INFINIRT_LIBRARY})
 else()
   Message(FATAL_ERROR "INFINI_ROOT is not defined")
+endif()
+
+if(BUILD_TEST)
+set(BUILD_GMOCK
+      OFF
+      CACHE BOOL "Do not build gmock" FORCE)
+  set(INSTALL_GTEST
+      OFF
+      CACHE BOOL "Do not install gtest" FORCE)
+  add_subdirectory(3rd-party/googletest)
+  include_directories(3rd-party/googletest/googletest/include)
+endif()
+
+function(build_test files)
+  # Non-recursive glob for skip failed tests
+  file(GLOB TEST_SOURCES ${files})
+  foreach(testsourcefile ${TEST_SOURCES})
+    get_filename_component(testname ${testsourcefile} NAME_WE)
+    add_executable(${testname} ${testsourcefile})
+    target_link_libraries(${testname} InfiniTensor GTest::gtest_main)
+    add_test(NAME ${testname} COMMAND ${testname})
+  endforeach(testsourcefile ${TEST_SOURCES})
+endfunction()
+
+if(BUILD_TEST)
+  enable_testing()
+  build_test(test/kernels/*.cc)
 endif()

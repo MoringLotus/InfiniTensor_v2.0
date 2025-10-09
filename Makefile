@@ -1,16 +1,20 @@
 ﻿.PHONY : build clean check-infini
 
 TYPE ?= Release
-
-CMAKE_OPT = -DCMAKE_BUILD_TYPE=$(TYPE)
-INFINICORE_URL = git@github.com:InfiniTensor/InfiniCore.git
-INFINICORE_DIR = InfiniCore
-CUR_DIR := $(shell pwd)
-
+TEST ?= ON
 # 平台参数（CUDA / ASCEND / CPU / ...）
 PLATFORM ?= CPU
 # 通信开关（ON / OFF）
 COMM ?= OFF
+
+CMAKE_OPT = -DCMAKE_BUILD_TYPE=$(TYPE)
+CMAKE_OPT += -DBUILD_TEST=$(TEST)
+
+# InfiniCore 仓库地址
+INFINICORE_URL = git@github.com:InfiniTensor/InfiniCore.git
+INFINICORE_DIR = InfiniCore
+CUR_DIR := $(shell pwd)
+
 
 ifeq ($(PLATFORM), CPU)
     XMAKE_PLATFORM_FLAG = --cpu=y
@@ -64,3 +68,5 @@ build: check-infini
 clean:
 	rm -rf build
 
+test:
+	cd build/$(TYPE) && make test

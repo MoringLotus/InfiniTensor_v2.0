@@ -39,9 +39,9 @@ namespace infini
     protected:
         virtual optional<vector<Shape>> inferShape() = 0;
         virtual vector<DataType> inferDataType() const = 0;
+        bool checkValid(GraphObj *graph);
 
     private:
-        bool checkValid(GraphObj *graph);
         void addPredecessors(const Operator &op);
         void addSuccessors(const Operator &op);
         void removePredecessors(const Operator &op);

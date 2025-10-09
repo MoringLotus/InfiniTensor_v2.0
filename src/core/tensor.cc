@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <numeric>
+#include <iomanip>
 
 namespace infini
 {
@@ -35,16 +36,16 @@ namespace infini
 
     Blob TensorObj::getData() const { return data; }
 
-    void TensorObj::dataMalloc(const Blob &data_)
+    void TensorObj::setData(void *data_)
     {
-        IT_ASSERT(data == nullptr);
-        data = std::move(data_);
+        IT_ASSERT(data != nullptr);
+        data = std::make_shared<BlobObj>(data_);
     }
 
     void TensorObj::dataMalloc(const Runtime &runtime)
     {
         IT_ASSERT(data == nullptr);
-        data = make_ref<BlobObj>(runtime->allocDevice(getBytes()));
+        data = make_ref<BlobObj>(runtime->allocDevice(getTotalBytes()));
     }
 
     ElementType TensorObj::getElement() const
@@ -72,11 +73,11 @@ namespace infini
                 min_offset += (shape[i] - 1) * stride[i];
             }
         }
-        storageSize = max_offset - min_offset;
+        storageSize = max_offset - min_offset + 1;
         return storageSize;
     }
 
-    ElementType TensorObj::getBytes() const
+    ElementType TensorObj::getTotalBytes() const
     {
         return getStorageSize() * dtype.getSize();
     }
@@ -147,5 +148,71 @@ namespace infini
         }
         return true;
     }
+
+    void TensorObj::printData(const Runtime &runtime, size_t maxElements, int precision) const
+    {
+        IT_ASSERT(data != nullptr);
+        switch (dtype.getType())
+        {
+        case INFINI_DTYPE_F32:
+            printDataImpl<float>(runtime, maxElements, precision);
+            break;
+        case INFINI_DTYPE_F64:
+            printDataImpl<double>(runtime, maxElements, precision);
+            break;
+        case INFINI_DTYPE_I32:
+            printDataImpl<int32_t>(runtime, maxElements, precision);
+            break;
+        default:
+            IT_TODO_HALT_MSG("unsupported data type");
+        }
+    }
+
+    template <typename T>
+    void TensorObj::printDataImpl(const Runtime &runtime, size_t maxElements, int precision) const
+    {
+        IT_ASSERT(data != nullptr);
+        void *data_ptr = runtime->allocHost(getTotalBytes());
+        runtime->memcpy(data_ptr, data->getPtr<void *>(), getTotalBytes(), INFINIRT_MEMCPY_D2H);
+        size_t totalElements = getElement();
+        if (maxElements == 0)
+        {
+            maxElements = totalElements;
+        }
+        size_t printCount = std::min(totalElements, maxElements);
+        T *typed_data = static_cast<T *>(data_ptr);
+        std::cout << "Data: [";
+        for (size_t i = 0; i < printCount; ++i)
+        {
+            if (i > 0)
+            {
+                std::cout << ", ";
+            }
+            size_t offset = calculateLinearOffset(i, shape, stride);
+
+            if constexpr (std::is_floating_point_v<T> || std::is_same_v<T, double>)
+            {
+                std::cout << std::setprecision(precision) << typed_data[offset];
+            }
+            else if constexpr (std::is_same_v<T, bool>)
+            {
+                std::cout << (typed_data[offset] ? "true" : "false");
+            }
+            else
+            {
+                std::cout << static_cast<int64_t>(typed_data[offset]);
+            }
+        }
+        if (printCount < totalElements)
+        {
+            std::cout << ", ... (" << totalElements - printCount << " more)";
+        }
+        std::cout << "]" << std::endl;
+        runtime->deallocHost(data_ptr);
+    }
+
+    template void TensorObj::printDataImpl<float>(const Runtime &, size_t, int) const;
+    template void TensorObj::printDataImpl<double>(const Runtime &, size_t, int) const;
+    template void TensorObj::printDataImpl<int32_t>(const Runtime &, size_t, int) const;
 
 }; // namespace infini

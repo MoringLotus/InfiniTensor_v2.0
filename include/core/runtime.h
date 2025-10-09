@@ -27,10 +27,11 @@ namespace infini
     // 全局 map: thread_id -> Context
     std::unordered_map<std::thread::id, Context> threadContexts;
     std::mutex mtx; // 保护 map
-
-    RuntimeObj() {}
+    size_t workspaceSize;
+    void *workspace;
 
   public:
+    RuntimeObj() { allocworkspace(); }
     RuntimeObj(const RuntimeObj &) = delete;
     RuntimeObj &operator=(const RuntimeObj &) = delete;
 
@@ -56,9 +57,12 @@ namespace infini
     void *mallocAsync(size_t size, infinirtStream_t stream);
     void freeAsync(void *ptr, infinirtStream_t stream);
     void synchronize() const;
-    // void *getWorkspace(size_t size) const;
+    size_t getWorkspaceSize() const;
+    void *getWorkspace(size_t size) const;
 
     // string toString() const;
+  private:
+    void allocworkspace();
   };
 } // namespace infini
 #endif // RUNTIME_H

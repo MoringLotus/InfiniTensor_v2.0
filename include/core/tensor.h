@@ -5,14 +5,11 @@
 #include "core/blob.h"
 #include "core/object.h"
 #include "core/dtype.h"
+#include "utils/utils.h"
 
 namespace infini
 {
 
-    using ShapeElem = size_t;
-    using Shape = vector<ShapeElem>;
-    using StrideElem = ptrdiff_t;
-    using Stride = vector<StrideElem>;
     class TensorObj : public Object
     {
         friend class GraphObj;
@@ -41,14 +38,14 @@ namespace infini
         Blob getData() const;
         ElementType getElement() const;
         ElementType getStorageSize() const;
-        ElementType getBytes() const;
+        ElementType getTotalBytes() const;
         ElementType getRank() const;
         OpVec getTargets() const;
         Operator getSource() const;
 
         string toString() const override;
         // ============= TensorObj Data Operations==============
-        void dataMalloc(const Blob &data_);
+        void setData(void *data_);
         void dataMalloc(const Runtime &runtime);
 
         template <typename T>
@@ -60,6 +57,8 @@ namespace infini
             return data->getPtr<T>();
         }
 
+        void printData(const Runtime &runtime, size_t maxElements = 0, int precision = 4) const;
+
     private:
         // ============= Change Graph Operations==============
         void addTarget(const Operator &op);
@@ -67,6 +66,9 @@ namespace infini
         void removeTarget(const Operator &op);
         Stride computeContiguousStride(const Shape &shape) const;
         bool checkValid() const;
+
+        template <typename T>
+        void printDataImpl(const Runtime &runtime, size_t maxElements = 0, int precision = 4) const;
     };
 
 } // namespace infini
